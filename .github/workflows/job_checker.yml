@@ -1,12 +1,10 @@
-name: Amazon Energy/EV/Senior PM Jobs Checker
+name: Debug Job Scanner
 
 on:
-  schedule:
-    - cron: '*/30 * * * *'
   workflow_dispatch:
 
 jobs:
-  check-jobs:
+  debug:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -21,20 +19,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     
-    - name: List installed packages
-      run: pip list
+    - name: Show directory contents
+      run: ls -la
     
-    - name: Check environment
-      run: |
-        echo "Checking working directory:"
-        pwd
-        echo "Listing directory contents:"
-        ls -la
-        
-    - name: Run Job Scanner with Debug
+    - name: Run debug script
       env:
         EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
         EMAIL_PASSWORD: ${{ secrets.EMAIL_APP_PASSWORD }}
-        LINKEDIN_EMAIL: ${{ secrets.LINKEDIN_EMAIL }}
-        LINKEDIN_PASSWORD: ${{ secrets.LINKEDIN_PASSWORD }}
       run: python job_scanner.py
