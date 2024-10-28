@@ -6,7 +6,6 @@ import os
 import sys
 
 def log_message(message):
-    # Print to console and file
     print(message, flush=True)
     with open('job_scan.log', 'a') as f:
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -17,22 +16,48 @@ class AmazonJobScanner:
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
-        self.search_terms = [
-            'energy',
-            'ev charging',
-            'electric vehicle',
-            'senior product management',
-            'senior product manager',
-            'sr. product manager'
+        # Broader search terms to cast a wider net
+        self.base_searches = [
+            'product manager',
+            'product management',
+            'program manager'
         ]
+        
+        # Keywords to filter results
+        self.keywords = [
+            'senior',
+            'sr',
+            'lead',
+            'energy',
+            'ev',
+            'electric vehicle',
+            'charging',
+            'renewable',
+            'sustainability'
+        ]
+
+    def is_relevant_job(self, title, description):
+        """Check if job matches our criteria"""
+        title_lower = title.lower()
+        desc_lower = description.lower()
+        
+        # Check if it's a senior/lead role
+        is_senior = any(word in title_lower for word in ['senior', 'sr', 'sr.', 'lead', 'principal'])
+        
+        # Check if it's related to energy/EV
+        is_energy_related = any(word in title_lower or word in desc_lower for word in 
+            ['energy', 'ev', 'electric vehicle', 'charging', 'renewable', 'sustainability'])
+        
+        return is_senior or is_energy_related
 
     def scan_jobs(self):
         log_message("\nStarting Amazon job scan...")
         jobs_found = []
+        seen_urls = set()  # To avoid duplicates
         
-        for term in self.search_terms:
-            log_message(f"\nSearching for: {term}")
-            url = f"https://www.amazon.jobs/en/search?base_query={term.replace(' ', '+')}&loc_query=United+States"
+        for search_term in self.base_searches:
+            log_message(f"\nSearching for: {search_term}")
+            url = f"https://www.amazon.jobs/en/search?base_query={search_term.replace(' ', '+')}&loc_query=United+States"
             
             try:
                 log_message(f"Fetching URL: {url}")
@@ -43,26 +68,42 @@ class AmazonJobScanner:
                     soup = BeautifulSoup(response.text, 'html.parser')
                     job_cards = soup.find_all('div', class_='job-tile')
                     
-                    log_message(f"Found {len(job_cards)} job cards")
+                    log_message(f"Found {len(job_cards)} job cards to analyze")
                     
                     for job in job_cards:
-                        title = job.find('h3', class_='job-title')
-                        location = job.find('p', class_='location-and-id')
+                        try:
+                            title_elem = job.find('h3', class_='job-title')
+                            location_elem = job.find('p', class_='location-and-id')
+                            description_elem = job.find('p', class_='description')
+                            
+                            if title_elem and location_elem:
+                                title = title_elem.text.strip()
+                                location = location_elem.text.strip()
+                                description = description_elem.text.strip() if description_elem else ""
+                                job_url = 'https://www.amazon.jobs' + job.find('a')['href']
+                                
+                                # Only process if we haven't seen this URL
+                                if job_url not in seen_urls:
+                                    if self.is_relevant_job(title, description):
+                                        job_info = {
+                                            'title': title,
+                                            'location': location,
+                                            'url': job_url,
+                                            'description': description,
+                                            'found_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                                        }
+                                        jobs_found.append(job_info)
+                                        seen_urls.add(job_url)
+                                        log_message(f"Found relevant job: {title} in {location}")
                         
-                        if title and location:
-                            job_info = {
-                                'title': title.text.strip(),
-                                'location': location.text.strip(),
-                                'url': 'https://www.amazon.jobs' + job.find('a')['href'],
-                                'search_term': term
-                            }
-                            jobs_found.append(job_info)
-                            log_message(f"Found job: {job_info['title']} in {job_info['location']}")
+                        except Exception as e:
+                            log_message(f"Error processing job card: {str(e)}")
+                            continue
                 
                 time.sleep(2)  # Pause between searches
                 
             except Exception as e:
-                log_message(f"Error searching for {term}: {str(e)}")
+                log_message(f"Error searching for {search_term}: {str(e)}")
         
         return jobs_found
 
@@ -73,7 +114,7 @@ def main():
     scanner = AmazonJobScanner()
     jobs = scanner.scan_jobs()
     
-    log_message(f"\nTotal jobs found: {len(jobs)}")
+    log_message(f"\nTotal relevant jobs found: {len(jobs)}")
     
     # Write detailed results to file
     with open('jobs_found.txt', 'w') as f:
@@ -84,8 +125,10 @@ def main():
             f.write(f"Title: {job['title']}\n")
             f.write(f"Location: {job['location']}\n")
             f.write(f"URL: {job['url']}\n")
-            f.write(f"Search Term: {job['search_term']}\n")
-            f.write("-" * 50 + "\n")
+            f.write(f"Found: {job['found_time']}\n")
+            if job['description']:
+                f.write(f"Description Preview: {job['description'][:200]}...\n")
+            f.write("-" * 50 + "\n\n")
     
     log_message("\n=== Scan Complete ===")
 
