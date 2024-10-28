@@ -1,11 +1,36 @@
-name: Test
+name: Amazon Job Scanner
 
 on:
+  schedule:
+    - cron: '*/30 * * * *'  # Run every 30 minutes
   workflow_dispatch:
 
 jobs:
-  test:
+  scan-jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: python test.py
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4
+          
+      - name: Run job scanner
+        run: |
+          echo "Starting job scan..."
+          python -u job_scanner.py
+          echo "Job scan completed."
+          
+      - name: Upload scan results
+        uses: actions/upload-artifact@v4
+        with:
+          name: job-scan-results
+          path: |
+            job_scan.log
+            jobs_found.txt
