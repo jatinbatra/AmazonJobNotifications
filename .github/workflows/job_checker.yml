@@ -9,16 +9,17 @@ jobs:
   check-jobs:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4    # Updated from v2
     
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5    # Updated from v2
       with:
         python-version: '3.9'
     
     - name: Install dependencies
       run: |
-        pip install requests beautifulsoup4 linkedin-api
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
     
     - name: Run Enhanced Job Checker
       env:
@@ -26,4 +27,4 @@ jobs:
         EMAIL_PASSWORD: ${{ secrets.EMAIL_APP_PASSWORD }}
         LINKEDIN_EMAIL: ${{ secrets.LINKEDIN_EMAIL }}
         LINKEDIN_PASSWORD: ${{ secrets.LINKEDIN_PASSWORD }}
-      run: python enhanced_job_checker.py
+      run: python job_scanner.py
