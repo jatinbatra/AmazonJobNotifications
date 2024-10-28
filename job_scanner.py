@@ -1,4 +1,4 @@
-name: Job Check
+name: Verbose Job Check
 
 on:
   workflow_dispatch:
@@ -15,7 +15,17 @@ jobs:
           python-version: '3.9'
           
       - name: Install requests
-        run: pip install requests
-        
-      - name: Run check
-        run: python test.py
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+          
+      - name: Show Python version
+        run: |
+          python --version
+          pip list
+          
+      - name: Run check with output
+        run: |
+          echo "Starting job check..."
+          python -u test.py
+          echo "Job check completed."
