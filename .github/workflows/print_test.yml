@@ -1,0 +1,30 @@
+name: Print Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-print:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Run print test
+        run: |
+          echo "==== Starting Print Test ===="
+          python -u print_test.py
+          echo "==== Checking Output File ===="
+          cat output.txt
+          echo "==== Test Complete ===="
+
+      - name: Upload output file
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-output
+          path: output.txt
